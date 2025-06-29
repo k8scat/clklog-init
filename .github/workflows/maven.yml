@@ -47,37 +47,16 @@ jobs:
         title: "Release ${{ env.RELEASE_VERSION }}"
         files: |
           staging/*.jar
-    - name: Docker meta
-      id: meta
-      uses: docker/metadata-action@v4
-      with:
-        images: zcunsoft/init
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        # TODO: Use Secrets when Public
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    - name: Build and push
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        build-args: |
-          "JAR_FILE=staging/clklog-init-${{ env.RELEASE_VERSION }}.jar"
-    - name: Set Docker image tag
-      id: set-tag
-      run: echo "::set-output name=tag::$(if [ $GITHUB_REF == 'refs/heads/main' ]; then echo latest; else echo ${GITHUB_REF#refs/heads/}; fi)"
-    - name: Login to Aliyun Docker Registry
-      uses: docker/login-action@v2
-      with:
-        # TODO: Use Secrets when Public
-        registry: ${{ secrets.ALIYUN_REGISTRY }}
-        username: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
-        password: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
-    - name: Push image to Aliyun Docker Registry
+    
+    - name: Retrieve git tag
+      id: git-tag
       run: |
-        docker buildx imagetools create \
-          --tag ${{ secrets.ALIYUN_REGISTRY }}/clklog/init:latest \
-          zcunsoft/init:${{ github.ref_name }}
+        echo "GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+    
+    - name: Build and push image
+      run: |
+        docker login -u '${{ secrets.TCR_USERNAME }}' -p ${{ secrets.TCR_PASSWORD }} ${{ secrets.TCR_REGISTRY }}
+        docker build \
+          --build-arg JAR_FILE=staging/clklog-init-${{ env.RELEASE_VERSION }}.jar \
+          -t ${{ secrets.TCR_REGISTRY }}/prod/clklog-init:${{ env.GIT_TAG }} .
+        docker push ${{ secrets.TCR_REGISTRY }}/prod/clklog-init:${{ env.GIT_TAG }}

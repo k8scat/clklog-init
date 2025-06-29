@@ -104,7 +104,9 @@ CREATE TABLE IF NOT EXISTS log_analysis
     `is_logined` Int8 DEFAULT 0,
     `event_session_id` String,
     `create_time` DateTime,
-    `raw_url` String
+    `raw_url` String,
+    `device_sn` String,
+    `origin_data` String
 )
 ENGINE = MergeTree
 PARTITION BY stat_date
